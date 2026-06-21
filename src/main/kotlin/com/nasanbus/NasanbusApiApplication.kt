@@ -7,5 +7,5 @@ import org.springframework.boot.runApplication
 class NasanbusApiApplication
 
 fun main(args: Array<String>) {
-	runApplication<NasanbusApiApplication>(*args)
+    runApplication<NasanbusApiApplication>(*args)
 }
