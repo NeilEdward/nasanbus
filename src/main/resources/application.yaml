@@ -24,6 +24,13 @@ spring:
 server:
   port: 8080
 
+springdoc:
+  writer-with-default-pretty-printer: true
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+
 management:
   endpoints:
     web:
