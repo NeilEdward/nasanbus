@@ -26,9 +26,9 @@ Passwords must not be stored in the NasanBus database.
 
 | Field | Value |
 |---|---|
-| User Pool Name | `nasanbus-user-pool` |
-| AWS Region | `us-east-1` |
-| User Pool ID | `us-east-1_sEDxoPqSt` |
+| User Pool Name | `<user-pool-name>` |
+| AWS Region | `<aws-region>` |
+| User Pool ID | `<user-pool-id>` |
 
 ---
 
@@ -38,7 +38,7 @@ Passwords must not be stored in the NasanBus database.
 |---|---|
 | Domain Type | Cognito domain |
 | Branding Version | Managed login |
-| Domain URL | `https://us-east-1sedxopqst.auth.us-east-1.amazoncognito.com` |
+| Domain URL | `<cognito-domain-url>` |
 
 ---
 
@@ -46,7 +46,7 @@ Passwords must not be stored in the NasanBus database.
 
 | Field | Value |
 |---|---|
-| App Client Name | `nasanbus-web-client` |
+| App Client Name | `<app-client-name>` |
 | Client Secret | None |
 | Client Type | Public client |
 | Access Token Expiration | 60 minutes |
@@ -158,7 +158,7 @@ profile
 The Spring Boot backend uses this value to validate Cognito JWT tokens:
 
 ```txt
-https://cognito-idp.us-east-1.amazonaws.com/us-east-1_sEDxoPqSt
+https://cognito-idp.<aws-region>.amazonaws.com/<user-pool-id>
 ```
 
 In `application.yml`, this can be configured as:
@@ -169,7 +169,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_sEDxoPqSt
+          issuer-uri: ${COGNITO_ISSUER_URI}
 ```
 
 Recommended environment variable version:
@@ -186,7 +186,7 @@ spring:
 Recommended local environment value:
 
 ```txt
-COGNITO_ISSUER_URI=https://cognito-idp.us-east-1.amazonaws.com/us-east-1_sEDxoPqSt
+COGNITO_ISSUER_URI=<cognito-issuer-uri>
 ```
 
 ---
@@ -196,7 +196,7 @@ COGNITO_ISSUER_URI=https://cognito-idp.us-east-1.amazonaws.com/us-east-1_sEDxoPq
 Cognito exposes the JSON Web Key Set here:
 
 ```txt
-https://cognito-idp.us-east-1.amazonaws.com/us-east-1_sEDxoPqSt/.well-known/jwks.json
+https://cognito-idp.<aws-region>.amazonaws.com/<user-pool-id>/.well-known/jwks.json
 ```
 
 Spring Security uses the issuer URI to discover this automatically.
@@ -208,10 +208,10 @@ Spring Security uses the issuer URI to discover this automatically.
 For the future NasanBus frontend, use environment variables like:
 
 ```txt
-VITE_COGNITO_REGION=us-east-1
-VITE_COGNITO_USER_POOL_ID=us-east-1_sEDxoPqSt
+VITE_COGNITO_REGION=<aws-region>
+VITE_COGNITO_USER_POOL_ID=<user-pool-id>
 VITE_COGNITO_CLIENT_ID=<replace-with-app-client-id>
-VITE_COGNITO_DOMAIN=https://us-east-1sedxopqst.auth.us-east-1.amazoncognito.com
+VITE_COGNITO_DOMAIN=<cognito-domain-url>
 VITE_COGNITO_REDIRECT_URI=http://localhost:5173/auth/callback
 VITE_COGNITO_LOGOUT_URI=http://localhost:5173/login
 ```
@@ -223,14 +223,14 @@ VITE_COGNITO_LOGOUT_URI=http://localhost:5173/login
 For the NasanBus backend, use:
 
 ```txt
-COGNITO_ISSUER_URI=https://cognito-idp.us-east-1.amazonaws.com/us-east-1_sEDxoPqSt
+COGNITO_ISSUER_URI=<cognito-issuer-uri>
 ```
 
 Optional backend variables:
 
 ```txt
-COGNITO_REGION=us-east-1
-COGNITO_USER_POOL_ID=us-east-1_sEDxoPqSt
+COGNITO_REGION=<aws-region>
+COGNITO_USER_POOL_ID=<user-pool-id>
 ```
 
 ---

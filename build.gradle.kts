@@ -54,6 +54,7 @@ allOpen {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    systemProperty("COGNITO_ISSUER_URI", "https://example.com/test-issuer")
 }
 
 openApi {
