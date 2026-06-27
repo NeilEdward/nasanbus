@@ -2,7 +2,10 @@ package com.nasanbus.users.service
 
 import com.nasanbus.auth.CognitoUserClaims
 import com.nasanbus.common.exception.ConflictException
+import com.nasanbus.common.exception.ForbiddenException
+import com.nasanbus.common.exception.NotFoundException
 import com.nasanbus.users.entity.AccountEntity
+import com.nasanbus.users.model.AccountStatus
 import com.nasanbus.users.repository.AccountRepository
 import com.nasanbus.users.repository.AccountRoleRepository
 import org.junit.jupiter.api.Test
@@ -10,11 +13,136 @@ import java.lang.reflect.Proxy
 import java.time.LocalDateTime
 import java.util.UUID
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 
 class AccountServiceSyncTests {
+    @Test
+    fun `current user returns existing active account with roles`() {
+        val accountId = UUID.randomUUID()
+        val account =
+            AccountEntity(
+                id = accountId,
+                cognitoSub = "cognito-user-sub",
+                email = "admin@nasanbus.test",
+                firstName = "Admin",
+                lastName = "User",
+                phoneNumber = "+639171234567",
+                status = AccountStatus.ACTIVE,
+                addedOn = LocalDateTime.now(),
+                addedBy = "cognito-user-sub",
+                updatedBy = "cognito-user-sub",
+                updatedOn = LocalDateTime.now(),
+            )
+        val accountService =
+            AccountService(
+                accountRepository(
+                    accountByCognitoSub = account,
+                    onSave = { it },
+                ),
+                accountRoleRepository(listOf("ADMIN")),
+            )
+
+        val response = accountService.getCurrentUser("cognito-user-sub")
+
+        assertEquals(accountId, response.id)
+        assertEquals("cognito-user-sub", response.cognitoSub)
+        assertEquals("admin@nasanbus.test", response.email)
+        assertEquals("Admin", response.firstName)
+        assertEquals("User", response.lastName)
+        assertEquals("+639171234567", response.phoneNumber)
+        assertEquals(AccountStatus.ACTIVE, response.status)
+        assertEquals(listOf("ADMIN"), response.roles)
+    }
+
+    @Test
+    fun `current user returns empty roles when account has no role assignments`() {
+        val account =
+            AccountEntity(
+                id = UUID.randomUUID(),
+                cognitoSub = "cognito-user-sub",
+                email = "commuter@nasanbus.test",
+                firstName = "Commuter",
+                lastName = "User",
+                phoneNumber = null,
+                status = AccountStatus.ACTIVE,
+                addedOn = LocalDateTime.now(),
+                addedBy = "cognito-user-sub",
+                updatedBy = "cognito-user-sub",
+                updatedOn = LocalDateTime.now(),
+            )
+        val accountService =
+            AccountService(
+                accountRepository(
+                    accountByCognitoSub = account,
+                    onSave = { it },
+                ),
+                accountRoleRepository(emptyList()),
+            )
+
+        val response = accountService.getCurrentUser("cognito-user-sub")
+
+        assertEquals(emptyList(), response.roles)
+    }
+
+    @Test
+    fun `current user rejects unsynced Cognito subject`() {
+        val accountService =
+            AccountService(
+                accountRepository(
+                    accountByCognitoSub = null,
+                    onSave = { it },
+                ),
+                accountRoleRepository(emptyList()),
+            )
+
+        val exception =
+            assertFailsWith<NotFoundException> {
+                accountService.getCurrentUser("unsynced-cognito-sub")
+            }
+
+        assertEquals("Account not found", exception.message)
+    }
+
+    @Test
+    fun `current user rejects inactive account`() {
+        val accountService =
+            AccountService(
+                accountRepository(
+                    accountByCognitoSub = inactiveAccount(AccountStatus.INACTIVE),
+                    onSave = { it },
+                ),
+                accountRoleRepository(emptyList()),
+            )
+
+        val exception =
+            assertFailsWith<ForbiddenException> {
+                accountService.getCurrentUser("cognito-user-sub")
+            }
+
+        assertEquals("Account is inactive", exception.message)
+    }
+
+    @Test
+    fun `current user rejects suspended account`() {
+        val accountService =
+            AccountService(
+                accountRepository(
+                    accountByCognitoSub = inactiveAccount(AccountStatus.SUSPENDED),
+                    onSave = { it },
+                ),
+                accountRoleRepository(emptyList()),
+            )
+
+        val exception =
+            assertFailsWith<ForbiddenException> {
+                accountService.getCurrentUser("cognito-user-sub")
+            }
+
+        assertEquals("Account is suspended", exception.message)
+    }
+
     @Test
     fun `sync returns existing account by Cognito subject`() {
         val accountId = UUID.randomUUID()
@@ -26,7 +154,7 @@ class AccountServiceSyncTests {
                 firstName = "Admin",
                 lastName = "User",
                 phoneNumber = "+639171234567",
-                status = "ACTIVE",
+                status = AccountStatus.ACTIVE,
                 addedOn = LocalDateTime.now(),
                 addedBy = "cognito-user-sub",
                 updatedBy = "cognito-user-sub",
@@ -62,7 +190,7 @@ class AccountServiceSyncTests {
         assertEquals("Admin", response.firstName)
         assertEquals("User", response.lastName)
         assertEquals("+639171234567", response.phoneNumber)
-        assertEquals("ACTIVE", response.status)
+        assertEquals(AccountStatus.ACTIVE, response.status)
         assertEquals(listOf("ADMIN", "DRIVER"), response.roles)
         assertFalse(saveCalled)
     }
@@ -100,7 +228,7 @@ class AccountServiceSyncTests {
         assertEquals("Admin", createdAccount.firstName)
         assertEquals("User", createdAccount.lastName)
         assertEquals("+639171234567", createdAccount.phoneNumber)
-        assertEquals("ACTIVE", createdAccount.status)
+        assertEquals(AccountStatus.ACTIVE, createdAccount.status)
         assertEquals("cognito-user-sub", createdAccount.addedBy)
         assertEquals("cognito-user-sub", createdAccount.updatedBy)
 
@@ -182,9 +310,7 @@ class AccountServiceSyncTests {
             }
         }
 
-    private inline fun <reified T> proxy(
-        crossinline handler: (String, Array<Any?>) -> Any?,
-    ): T =
+    private inline fun <reified T> proxy(crossinline handler: (String, Array<Any?>) -> Any?): T =
         Proxy.newProxyInstance(
             T::class.java.classLoader,
             arrayOf(T::class.java),
@@ -192,7 +318,18 @@ class AccountServiceSyncTests {
             handler(method.name, arguments ?: emptyArray())
         } as T
 
-    private fun unexpectedMethod(methodName: String): Nothing {
+    private fun unexpectedMethod(methodName: String): Nothing =
         throw UnsupportedOperationException("Unexpected repository method: $methodName")
-    }
+
+    private fun inactiveAccount(status: AccountStatus): AccountEntity =
+        AccountEntity(
+            id = UUID.randomUUID(),
+            cognitoSub = "cognito-user-sub",
+            email = "admin@nasanbus.test",
+            status = status,
+            addedOn = LocalDateTime.now(),
+            addedBy = "cognito-user-sub",
+            updatedBy = "cognito-user-sub",
+            updatedOn = LocalDateTime.now(),
+        )
 }

@@ -1,0 +1,5 @@
+package com.nasanbus.common.exception
+
+class NotFoundException(
+    message: String,
+) : RuntimeException(message)

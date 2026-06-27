@@ -13,7 +13,7 @@ data class Account(
     val firstName: String? = null,
     val lastName: String? = null,
     val phoneNumber: String? = null,
-    val status: String = "ACTIVE",
+    val status: AccountStatus = AccountStatus.ACTIVE,
     override val addedOn: LocalDateTime? = null,
     override val addedBy: String,
     override val updatedBy: String,
@@ -83,3 +83,9 @@ internal fun AccountEntity.toSyncResponse(roles: List<String>) =
         status = status,
         roles = roles,
     )
+
+enum class AccountStatus {
+    ACTIVE,
+    INACTIVE,
+    SUSPENDED,
+}

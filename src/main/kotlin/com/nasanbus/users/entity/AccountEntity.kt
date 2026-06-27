@@ -1,6 +1,9 @@
 package com.nasanbus.users.entity
 
+import com.nasanbus.users.model.AccountStatus
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.time.LocalDateTime
@@ -16,7 +19,8 @@ class AccountEntity(
     var firstName: String? = null,
     var lastName: String? = null,
     var phoneNumber: String? = null,
-    var status: String = "ACTIVE",
+    @Enumerated(EnumType.STRING)
+    var status: AccountStatus = AccountStatus.ACTIVE,
     var addedOn: LocalDateTime? = null,
     var addedBy: String,
     var updatedBy: String,
