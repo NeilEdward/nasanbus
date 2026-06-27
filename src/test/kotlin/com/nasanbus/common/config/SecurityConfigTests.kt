@@ -21,12 +21,14 @@ class SecurityConfigTests {
     @ValueSource(
         strings = [
             "/api/v1/accounts",
+            "/api/v1/me",
             "/api/v1/roles",
             "/api/v1/accounts/00000000-0000-0000-0000-000000000000/roles",
         ],
     )
     fun `api endpoints require authentication`(path: String) {
-        mockMvc.perform(get(path))
+        mockMvc
+            .perform(get(path))
             .andExpect(status().isUnauthorized)
     }
 
@@ -34,12 +36,14 @@ class SecurityConfigTests {
     @ValueSource(
         strings = [
             "/api/v1/accounts",
+            "/api/v1/me",
             "/api/v1/roles",
             "/api/v1/accounts/00000000-0000-0000-0000-000000000000/roles",
         ],
     )
     fun `api endpoints accept jwt authentication`(path: String) {
-        mockMvc.perform(get(path).with(jwt()))
+        mockMvc
+            .perform(get(path).with(jwt()))
             .andExpect { result -> assertNotEquals(401, result.response.status) }
     }
 
@@ -53,7 +57,8 @@ class SecurityConfigTests {
         ],
     )
     fun `public endpoints do not require authentication`(path: String) {
-        mockMvc.perform(get(path))
+        mockMvc
+            .perform(get(path))
             .andExpect { result -> assertNotEquals(401, result.response.status) }
     }
 }

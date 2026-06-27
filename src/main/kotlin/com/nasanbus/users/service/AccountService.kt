@@ -2,15 +2,19 @@ package com.nasanbus.users.service
 
 import com.nasanbus.auth.CognitoUserClaims
 import com.nasanbus.common.exception.ConflictException
+import com.nasanbus.common.exception.ForbiddenException
+import com.nasanbus.common.exception.NotFoundException
 import com.nasanbus.users.entity.AccountEntity
 import com.nasanbus.users.model.Account
+import com.nasanbus.users.model.AccountStatus
+import com.nasanbus.users.model.CurrentUserResponse
 import com.nasanbus.users.model.SyncAccountResponse
 import com.nasanbus.users.model.toAccountEntity
 import com.nasanbus.users.model.toData
 import com.nasanbus.users.model.toEntity
 import com.nasanbus.users.model.toSyncResponse
-import com.nasanbus.users.repository.AccountRoleRepository
 import com.nasanbus.users.repository.AccountRepository
+import com.nasanbus.users.repository.AccountRoleRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -39,6 +43,33 @@ class AccountService(
 
     @Transactional(readOnly = true)
     fun findById(id: UUID): Account? = accountRepository.findById(id).orElse(null)?.toData()
+
+    @Transactional(readOnly = true)
+    fun getCurrentUser(cognitoSub: String): CurrentUserResponse {
+        val account =
+            accountRepository.findByCognitoSub(cognitoSub)
+                ?: throw NotFoundException("Account not found")
+
+        when (account.status) {
+            AccountStatus.INACTIVE -> throw ForbiddenException("Account is inactive")
+            AccountStatus.SUSPENDED -> throw ForbiddenException("Account is suspended")
+            AccountStatus.ACTIVE -> Unit
+        }
+
+        val accountId = requireNotNull(account.id)
+        val roles = accountRoleRepository.findRoleCodesByAccountId(accountId)
+
+        return CurrentUserResponse(
+            id = accountId,
+            cognitoSub = account.cognitoSub,
+            email = account.email,
+            firstName = account.firstName,
+            lastName = account.lastName,
+            phoneNumber = account.phoneNumber,
+            status = account.status,
+            roles = roles,
+        )
+    }
 
     @Transactional
     fun syncAccountFromCognito(claims: CognitoUserClaims): SyncAccountResponse {

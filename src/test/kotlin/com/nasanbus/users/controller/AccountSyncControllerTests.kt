@@ -2,6 +2,7 @@ package com.nasanbus.users.controller
 
 import com.nasanbus.auth.CognitoUserClaims
 import com.nasanbus.common.exception.ConflictException
+import com.nasanbus.users.model.AccountStatus
 import com.nasanbus.users.model.SyncAccountResponse
 import com.nasanbus.users.service.AccountService
 import org.hamcrest.Matchers.equalTo
@@ -29,7 +30,8 @@ class AccountSyncControllerTests {
 
     @Test
     fun `sync endpoint requires authentication`() {
-        mockMvc.perform(post("/api/v1/accounts/sync"))
+        mockMvc
+            .perform(post("/api/v1/accounts/sync"))
             .andExpect(status().isUnauthorized)
     }
 
@@ -45,7 +47,8 @@ class AccountSyncControllerTests {
                 phoneNumber = "+639171234567",
             )
 
-        Mockito.`when`(accountService.syncAccountFromCognito(claims))
+        Mockito
+            .`when`(accountService.syncAccountFromCognito(claims))
             .thenReturn(
                 SyncAccountResponse(
                     id = accountId,
@@ -54,25 +57,25 @@ class AccountSyncControllerTests {
                     firstName = "Admin",
                     lastName = "User",
                     phoneNumber = "+639171234567",
-                    status = "ACTIVE",
+                    status = AccountStatus.ACTIVE,
                     roles = listOf("ADMIN"),
                 ),
             )
 
-        mockMvc.perform(
-            post("/api/v1/accounts/sync")
-                .with(
-                    jwt()
-                        .jwt {
-                            it.subject("cognito-user-sub")
-                            it.claim("email", "admin@nasanbus.test")
-                            it.claim("given_name", "Admin")
-                            it.claim("family_name", "User")
-                            it.claim("phone_number", "+639171234567")
-                        },
-                ),
-        )
-            .andExpect(status().isOk)
+        mockMvc
+            .perform(
+                post("/api/v1/accounts/sync")
+                    .with(
+                        jwt()
+                            .jwt {
+                                it.subject("cognito-user-sub")
+                                it.claim("email", "admin@nasanbus.test")
+                                it.claim("given_name", "Admin")
+                                it.claim("family_name", "User")
+                                it.claim("phone_number", "+639171234567")
+                            },
+                    ),
+            ).andExpect(status().isOk)
             .andExpect(jsonPath("$.id", equalTo(accountId.toString())))
             .andExpect(jsonPath("$.cognitoSub", equalTo("cognito-user-sub")))
             .andExpect(jsonPath("$.email", equalTo("admin@nasanbus.test")))
@@ -96,22 +99,23 @@ class AccountSyncControllerTests {
                 phoneNumber = null,
             )
 
-        Mockito.`when`(accountService.syncAccountFromCognito(claims))
+        Mockito
+            .`when`(accountService.syncAccountFromCognito(claims))
             .thenThrow(ConflictException("Account email is already linked to another Cognito user"))
 
-        mockMvc.perform(
-            post("/api/v1/accounts/sync")
-                .with(
-                    jwt()
-                        .jwt {
-                            it.subject("new-cognito-sub")
-                            it.claim("email", "admin@nasanbus.test")
-                            it.claim("given_name", "Admin")
-                            it.claim("family_name", "User")
-                        },
-                ),
-        )
-            .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.detail", equalTo("Account email is already linked to another Cognito user")))
+        mockMvc
+            .perform(
+                post("/api/v1/accounts/sync")
+                    .with(
+                        jwt()
+                            .jwt {
+                                it.subject("new-cognito-sub")
+                                it.claim("email", "admin@nasanbus.test")
+                                it.claim("given_name", "Admin")
+                                it.claim("family_name", "User")
+                            },
+                    ),
+            ).andExpect(status().isConflict)
+            .andExpect(jsonPath("$.message", equalTo("Account email is already linked to another Cognito user")))
     }
 }

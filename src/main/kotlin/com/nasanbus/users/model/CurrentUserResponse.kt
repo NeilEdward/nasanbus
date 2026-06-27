@@ -2,7 +2,7 @@ package com.nasanbus.users.model
 
 import java.util.UUID
 
-data class SyncAccountResponse(
+data class CurrentUserResponse(
     val id: UUID,
     val cognitoSub: String,
     val email: String,
