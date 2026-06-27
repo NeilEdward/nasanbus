@@ -1,5 +1,6 @@
 package com.nasanbus.users.controller
 
+import com.nasanbus.common.exception.ConflictException
 import com.nasanbus.users.service.AccountNotFoundException
 import com.nasanbus.users.service.RoleNotFoundException
 import org.springframework.http.HttpStatus
@@ -15,6 +16,14 @@ class ApiExceptionHandler {
     fun handleNotFound(exception: RuntimeException): ProblemDetail =
         ProblemDetail.forStatusAndDetail(
             HttpStatus.NOT_FOUND,
+            requireNotNull(exception.message),
+        )
+
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ExceptionHandler(ConflictException::class)
+    fun handleConflict(exception: ConflictException): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(
+            HttpStatus.CONFLICT,
             requireNotNull(exception.message),
         )
 }

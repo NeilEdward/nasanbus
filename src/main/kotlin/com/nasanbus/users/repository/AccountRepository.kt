@@ -6,4 +6,6 @@ import java.util.UUID
 
 interface AccountRepository : JpaRepository<AccountEntity, UUID> {
     fun findByCognitoSub(cognitoSub: String): AccountEntity?
+
+    fun findByEmail(email: String): AccountEntity?
 }

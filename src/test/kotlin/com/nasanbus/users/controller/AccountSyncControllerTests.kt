@@ -1,6 +1,7 @@
 package com.nasanbus.users.controller
 
 import com.nasanbus.auth.CognitoUserClaims
+import com.nasanbus.common.exception.ConflictException
 import com.nasanbus.users.model.SyncAccountResponse
 import com.nasanbus.users.service.AccountService
 import org.hamcrest.Matchers.equalTo
@@ -82,5 +83,35 @@ class AccountSyncControllerTests {
             .andExpect(jsonPath("$.roles[0]", equalTo("ADMIN")))
 
         Mockito.verify(accountService).syncAccountFromCognito(claims)
+    }
+
+    @Test
+    fun `sync endpoint returns conflict when email belongs to another Cognito subject`() {
+        val claims =
+            CognitoUserClaims(
+                subject = "new-cognito-sub",
+                email = "admin@nasanbus.test",
+                firstName = "Admin",
+                lastName = "User",
+                phoneNumber = null,
+            )
+
+        Mockito.`when`(accountService.syncAccountFromCognito(claims))
+            .thenThrow(ConflictException("Account email is already linked to another Cognito user"))
+
+        mockMvc.perform(
+            post("/api/v1/accounts/sync")
+                .with(
+                    jwt()
+                        .jwt {
+                            it.subject("new-cognito-sub")
+                            it.claim("email", "admin@nasanbus.test")
+                            it.claim("given_name", "Admin")
+                            it.claim("family_name", "User")
+                        },
+                ),
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.detail", equalTo("Account email is already linked to another Cognito user")))
     }
 }
