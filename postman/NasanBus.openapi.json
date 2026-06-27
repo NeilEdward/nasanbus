@@ -176,6 +176,36 @@
         }
       }
     },
+    "/api/v1/accounts/sync": {
+      "post": {
+        "tags": [
+          "account-sync-controller"
+        ],
+        "operationId": "syncAccount",
+        "responses": {
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncAccountResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/roles": {
       "get": {
         "tags": [
@@ -410,6 +440,9 @@
               "null"
             ]
           },
+          "status": {
+            "type": "string"
+          },
           "addedOn": {
             "type": [
               "string",
@@ -448,6 +481,7 @@
           "addedBy",
           "cognitoSub",
           "email",
+          "status",
           "updatedBy"
         ]
       },
@@ -477,6 +511,55 @@
         "required": [
           "code",
           "name"
+        ]
+      },
+      "SyncAccountResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cognitoSub": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phoneNumber": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "cognitoSub",
+          "email",
+          "id",
+          "roles",
+          "status"
         ]
       },
       "Role": {

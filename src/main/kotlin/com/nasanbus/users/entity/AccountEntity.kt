@@ -16,6 +16,7 @@ class AccountEntity(
     var firstName: String? = null,
     var lastName: String? = null,
     var phoneNumber: String? = null,
+    var status: String = "ACTIVE",
     var addedOn: LocalDateTime? = null,
     var addedBy: String,
     var updatedBy: String,

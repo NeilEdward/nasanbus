@@ -11,6 +11,19 @@ import java.util.UUID
 interface AccountRoleRepository : JpaRepository<AccountRoleEntity, AccountRoleId> {
     fun findByAccountId(accountId: UUID): List<AccountRoleEntity>
 
+    @Query(
+        """
+        SELECT r.code
+        FROM AccountRoleEntity ar
+        JOIN RoleEntity r ON r.id = ar.roleId
+        WHERE ar.accountId = :accountId
+        ORDER BY r.code
+        """,
+    )
+    fun findRoleCodesByAccountId(
+        @Param("accountId") accountId: UUID,
+    ): List<String>
+
     fun existsByAccountIdAndRoleId(
         accountId: UUID,
         roleId: UUID,
