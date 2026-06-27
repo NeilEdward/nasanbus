@@ -1,12 +1,17 @@
 package com.nasanbus.common.config
 
+import com.nasanbus.security.NasanBusJwtAuthenticationConverter
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.web.SecurityFilterChain
 
 @Configuration
-class SecurityConfig {
+@EnableMethodSecurity
+class SecurityConfig(
+    private val nasanBusJwtAuthenticationConverter: NasanBusJwtAuthenticationConverter,
+) {
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain =
         http
@@ -28,6 +33,8 @@ class SecurityConfig {
                     .anyRequest()
                     .authenticated()
             }.oauth2ResourceServer {
-                it.jwt { }
+                it.jwt { jwt ->
+                    jwt.jwtAuthenticationConverter(nasanBusJwtAuthenticationConverter)
+                }
             }.build()
 }
