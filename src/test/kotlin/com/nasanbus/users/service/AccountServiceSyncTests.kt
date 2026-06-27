@@ -1,6 +1,7 @@
 package com.nasanbus.users.service
 
 import com.nasanbus.auth.CognitoUserClaims
+import com.nasanbus.common.exception.ConflictException
 import com.nasanbus.users.entity.AccountEntity
 import com.nasanbus.users.repository.AccountRepository
 import com.nasanbus.users.repository.AccountRoleRepository
@@ -10,6 +11,7 @@ import java.time.LocalDateTime
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
 class AccountServiceSyncTests {
@@ -112,13 +114,61 @@ class AccountServiceSyncTests {
         assertEquals(emptyList(), response.roles)
     }
 
+    @Test
+    fun `sync rejects duplicate email under different Cognito subject`() {
+        var saveCalled = false
+        val existingAccount =
+            AccountEntity(
+                id = UUID.randomUUID(),
+                cognitoSub = "existing-cognito-sub",
+                email = "admin@nasanbus.test",
+                addedOn = LocalDateTime.now(),
+                addedBy = "existing-cognito-sub",
+                updatedBy = "existing-cognito-sub",
+                updatedOn = LocalDateTime.now(),
+            )
+        val accountService =
+            AccountService(
+                accountRepository(
+                    accountByCognitoSub = null,
+                    accountByEmail = existingAccount,
+                    onSave = {
+                        saveCalled = true
+                        it
+                    },
+                ),
+                accountRoleRepository(emptyList()),
+            )
+
+        val exception =
+            assertFailsWith<ConflictException> {
+                accountService.syncAccountFromCognito(
+                    CognitoUserClaims(
+                        subject = "new-cognito-sub",
+                        email = "admin@nasanbus.test",
+                        firstName = "Admin",
+                        lastName = "User",
+                        phoneNumber = null,
+                    ),
+                )
+            }
+
+        assertEquals(
+            "Account email is already linked to another Cognito user",
+            exception.message,
+        )
+        assertFalse(saveCalled)
+    }
+
     private fun accountRepository(
         accountByCognitoSub: AccountEntity?,
+        accountByEmail: AccountEntity? = null,
         onSave: (AccountEntity) -> AccountEntity,
     ): AccountRepository =
         proxy { methodName, arguments ->
             when (methodName) {
                 "findByCognitoSub" -> accountByCognitoSub
+                "findByEmail" -> accountByEmail
                 "save" -> onSave(arguments[0] as AccountEntity)
                 else -> unexpectedMethod(methodName)
             }
