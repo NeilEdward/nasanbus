@@ -1,7 +1,14 @@
 package com.nasanbus.users.service
 
+import com.nasanbus.auth.CognitoUserClaims
 import com.nasanbus.users.entity.AccountEntity
 import com.nasanbus.users.model.Account
+import com.nasanbus.users.model.SyncAccountResponse
+import com.nasanbus.users.model.toAccountEntity
+import com.nasanbus.users.model.toData
+import com.nasanbus.users.model.toEntity
+import com.nasanbus.users.model.toSyncResponse
+import com.nasanbus.users.repository.AccountRoleRepository
 import com.nasanbus.users.repository.AccountRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -11,6 +18,7 @@ import java.util.UUID
 @Service
 class AccountService(
     private val accountRepository: AccountRepository,
+    private val accountRoleRepository: AccountRoleRepository,
 ) {
     @Transactional
     fun create(data: Account): Account {
@@ -25,36 +33,16 @@ class AccountService(
 
     @Transactional(readOnly = true)
     fun findById(id: UUID): Account? = accountRepository.findById(id).orElse(null)?.toData()
+
+    @Transactional
+    fun syncAccountFromCognito(claims: CognitoUserClaims): SyncAccountResponse {
+        val account =
+            accountRepository.findByCognitoSub(claims.subject)
+                ?: accountRepository.save(claims.toAccountEntity())
+
+        val accountId = requireNotNull(account.id)
+        val roles = accountRoleRepository.findRoleCodesByAccountId(accountId)
+
+        return account.toSyncResponse(roles)
+    }
 }
-
-private fun Account.toEntity() =
-    AccountEntity(
-        id = id,
-        cognitoSub = cognitoSub,
-        email = email,
-        firstName = firstName,
-        lastName = lastName,
-        phoneNumber = phoneNumber,
-        addedOn = addedOn,
-        addedBy = addedBy,
-        updatedBy = updatedBy,
-        updatedOn = updatedOn,
-        deletedBy = deletedBy,
-        deletedOn = deletedOn,
-    )
-
-private fun AccountEntity.toData() =
-    Account(
-        id = id,
-        cognitoSub = cognitoSub,
-        email = email,
-        firstName = firstName,
-        lastName = lastName,
-        phoneNumber = phoneNumber,
-        addedOn = addedOn,
-        addedBy = addedBy,
-        updatedBy = updatedBy,
-        updatedOn = updatedOn,
-        deletedBy = deletedBy,
-        deletedOn = deletedOn,
-    )
