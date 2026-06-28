@@ -4,6 +4,7 @@ import com.nasanbus.users.model.AccountRoleResponse
 import com.nasanbus.users.model.AssignRoleRequest
 import com.nasanbus.users.service.AccountRoleService
 import jakarta.validation.Valid
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -17,12 +18,14 @@ import java.util.UUID
 class AccountRoleController(
     private val accountRoleService: AccountRoleService,
 ) {
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PostMapping
     fun assignRoleToAccount(
         @PathVariable accountId: UUID,
         @Valid @RequestBody request: AssignRoleRequest,
     ): AccountRoleResponse = accountRoleService.assignRoleToAccount(accountId, request.roleCode)
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @GetMapping
     fun getAccountRoles(
         @PathVariable accountId: UUID,
